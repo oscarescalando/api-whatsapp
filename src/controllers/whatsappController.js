@@ -37,6 +37,7 @@ exports.getActiveDevices = async (req, res) => {
 exports.sendMessage = async (req, res) => {
   const { deviceId } = req.params;
   const { numero, mensaje, imagen } = req.body;
+ 
   try {
     const result = await whatsappService.sendMessage(
       deviceId,

@@ -9,15 +9,8 @@ const fs = require("fs");
 const socketManager = require("../utils/socketManager");
 const log = (pino = require("pino"));
 
-const usedDeviceIDs = new Set();
-
 exports.generateUniqueDeviceID = () => {
-  let newDeviceID;
-  do {
-    newDeviceID = Math.floor(Math.random() * 10) + 1;
-  } while (usedDeviceIDs.has(newDeviceID));
-
-  usedDeviceIDs.add(newDeviceID);
+  let newDeviceID = Math.floor(Math.random() * 10) + 1;
   return newDeviceID;
 };
 
@@ -25,17 +18,14 @@ exports.connectOrReconnect = async (userID) => {
   let codeQR;
   const sessionDir = `session_${userID}`;
   const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-
   const sock = makeWASocket({
     printQRInTerminal: false,
     auth: state,
     logger: log({ level: "silent" }),
   });
-
   return new Promise((resolve, reject) => {
     sock.ev.on("connection.update", async (update) => {
       const { connection, lastDisconnect, qr } = update;
-
       if (connection === "close") {
         let reason = new Boom(lastDisconnect.error).output.statusCode;
         if (reason === DisconnectReason.loggedOut) {
@@ -59,7 +49,7 @@ exports.connectOrReconnect = async (userID) => {
         codeQR = await qrcode.toDataURL(qr);
         resolve({
           message: "Conexión pendiente",
-          status: 201,
+          status: 200,
           deviceId: userID,
           qr: codeQR,
         });
@@ -67,15 +57,15 @@ exports.connectOrReconnect = async (userID) => {
         socketManager.saveSockets();
         resolve({
           message: "Conexión abierta",
-          status: 200,
+          status: 201,
           deviceId: userID,
           qr: null,
         });
       }
     });
 
-    sock.ev.on("creds.update", saveCreds);
     socketManager.setSocket(userID, sock);
+    sock.ev.on("creds.update", saveCreds);
   });
 };
 
@@ -165,9 +155,10 @@ exports.sendMessage = async (deviceId, numero, mensaje, imagen) => {
 
     return { mensaje: "Mensaje enviado con éxito", status: 200 };
   } catch (error) {
-    throw new Error(
-      "Error al enviar el mensaje, El dispositivo no esta Vinculado"
-    );
+    return {
+      mensaje: "Error al enviar el mensaje, El dispositivo no esta Vinculado",
+      status: 404,
+    };
   }
 };
 
