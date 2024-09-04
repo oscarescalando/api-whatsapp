@@ -72,11 +72,11 @@ exports.connectOrReconnect = async (userID) => {
 exports.disconnectDevice = async (deviceId) => {
   const connectionResult = await this.connectOrReconnect(deviceId);
 
-  if (connectionResult.status === 201) {
-    return res.status(404).json({
+  if (connectionResult.status === 200) {
+    return {
       error: `El ID del dispositivo no se encuentra registrado`,
       status: 404,
-    });
+    };
   }
 
   const sock = socketManager.getSocket(deviceId);
@@ -122,23 +122,25 @@ exports.sendMessage = async (deviceId, numero, mensaje, imagen) => {
   const connectionResult = await this.connectOrReconnect(deviceId);
   const sock = socketManager.getSocket(deviceId);
 
-  if (connectionResult.status === 201) {
-    return res.status(404).json({
+  if (connectionResult.status === 200) {
+    return {
       error: `El ID del dispositivo no se encuentra registrado`,
       status: 404,
-    });
-  }
-
-  if (!sock) {
-    throw new Error(`El ID del dispositivo no se encuentra registrado`);
+    };
   }
 
   if (!numero) {
-    throw new Error(`El número de teléfono es requerido`);
+    return {
+      error: `El número de teléfono es requerido`,
+      status: 404,
+    };
   }
 
   if (!mensaje && !imagen) {
-    throw new Error(`El mensaje o la imagen es requerido`);
+    return {
+      error: `El mensaje o la imagen es requerido`,
+      status: 404,
+    };
   }
 
   try {
