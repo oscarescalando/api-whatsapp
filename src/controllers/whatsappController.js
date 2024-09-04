@@ -7,8 +7,9 @@ exports.getQRCode = async (req, res) => {
     const result = await whatsappService.connectOrReconnect(userID);
     res.send(result);
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Error al iniciar la conexión" });
+    res
+      .status(500)
+      .json({ message: "Error al iniciar la conexión", error: error });
   }
 };
 
@@ -37,7 +38,7 @@ exports.getActiveDevices = async (req, res) => {
 exports.sendMessage = async (req, res) => {
   const { deviceId } = req.params;
   const { numero, mensaje, imagen } = req.body;
- 
+
   try {
     const result = await whatsappService.sendMessage(
       deviceId,
