@@ -43,15 +43,14 @@ exports.connectOrReconnect = async (userID) => {
         } else {
           this.connectOrReconnect(userID);
         }
-      }
-
-      if (reason === DisconnectReason.connectionClosed) {
-        this.connectOrReconnect(userID);
-      } else if (reason === DisconnectReason.timedOut) {
-        reject({
-          message: "Request Time-out",
-          status: 408,
-        });
+        if (reason === DisconnectReason.connectionClosed) {
+          this.connectOrReconnect(userID);
+        } else if (reason === DisconnectReason.timedOut) {
+          reject({
+            message: "Request Time-out",
+            status: 408,
+          });
+        }
       }
 
       if (qr && connection !== "open") {
