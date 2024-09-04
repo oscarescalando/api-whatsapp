@@ -16,8 +16,8 @@ exports.generateUniqueDeviceID = () => {
   return newDeviceID;
 };
 
-exports.connectOrReconnect = async (userID, message) => {
-  if (activeConnections.has(userID) && !!message) {
+exports.connectOrReconnect = async (userID) => {
+  if (activeConnections.has(userID)) {
     console.log(`Conexión ya existente para el usuario ${userID}`);
     return activeConnections.get(userID);
   }
@@ -41,18 +41,11 @@ exports.connectOrReconnect = async (userID, message) => {
             `Dispositivo ${userID} desconectado por cierre de sesión.`
           );
           await fs.promises.rm(sessionDir, { recursive: true, force: true });
-          console.log(
-            "Sesión eliminada. Reiniciando proceso de conexión en 5 segundos..."
-          );
-          setTimeout(() => {
-            console.log("Reiniciando proceso de conexión...");
-            this.connectOrReconnect(userID, false);
-          }, 5000);
         } else {
-          this.connectOrReconnect(userID, false);
+          this.connectOrReconnect(userID);
         }
         if (reason === DisconnectReason.connectionClosed) {
-          this.connectOrReconnect(userID, false);
+          this.connectOrReconnect(userID);
         } else if (reason === DisconnectReason.timedOut) {
           reject({
             message: "Request Time-out",
@@ -98,42 +91,30 @@ exports.connectOrReconnect = async (userID, message) => {
 };
 
 exports.disconnectDevice = async (deviceId) => {
-  if (activeConnections.has(deviceId)) {
-    const connectionResult = await activeConnections.get(deviceId);
-    if (connectionResult.status === 201) {
-      const sock = socketManager.getSocket(deviceId);
-      if (sock) {
-        try {
-          await sock.logout();
-          socketManager.removeSocket(deviceId);
-          const sessionDir = `session_${deviceId}`;
-          await fs.promises.rm(sessionDir, { recursive: true, force: true });
-          socketManager.saveSockets();
+  const connectionResult = await this.connectOrReconnect(deviceId);
 
-          activeConnections.delete(deviceId);
+  if (connectionResult.status === 200) {
+    return {
+      error: `El ID del dispositivo no se encuentra registrado`,
+      status: 404,
+    };
+  } else if (connectionResult.status === 201) {
+    const sock = socketManager.getSocket(deviceId);
 
-          return {
-            message: `El usuario ha sido desconectado y la sesión eliminada`,
-            status: 200,
-          };
-        } catch (error) {
-          console.error(
-            `Error al desconectar el dispositivo ${deviceId}:`,
-            error
-          );
-          return {
-            message: `Error al desconectar el dispositivo ${deviceId}`,
-            status: 500,
-          };
-        }
-      }
+    if (sock) {
+      await sock.logout();
+      socketManager.removeSocket(deviceId);
+      activeConnections.delete(deviceId);
+      const sessionDir = `session_${deviceId}`;
+      await fs.promises.rm(sessionDir, { recursive: true, force: true });
+      socketManager.saveSockets();
+
+      return {
+        message: `El usuario ha sido desconectado y la sesión eliminada`,
+        status: 200,
+      };
     }
   }
-
-  return {
-    message: `El dispositivo ${deviceId} no está conectado o no se encuentra`,
-    status: 404,
-  };
 };
 
 exports.getActiveDevices = () => {
@@ -152,7 +133,7 @@ exports.getActiveDevices = () => {
 };
 
 exports.sendMessage = async (deviceId, numero, mensaje, imagen) => {
-  const connectionResult = await this.connectOrReconnect(deviceId, true);
+  const connectionResult = await this.connectOrReconnect(deviceId);
   const sock = socketManager.getSocket(deviceId);
 
   if (connectionResult.status === 200) {
