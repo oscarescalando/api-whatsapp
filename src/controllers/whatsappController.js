@@ -15,15 +15,8 @@ exports.getQRCode = async (req, res) => {
 
 exports.disconnect = async (req, res) => {
   const { deviceId } = req.params;
-  try {
-    const result = await whatsappService.disconnectDevice(deviceId);
-    res.send(result);
-  } catch (error) {
-    res.status(500).json({
-      message: `Error al desconectar el dispositivo ${deviceId}, usuario no encontrado o no esta vinculado`,
-      status: 404,
-    });
-  }
+  const result = await whatsappService.disconnectDevice(deviceId);
+  res.send(result);
 };
 
 exports.getActiveDevices = async (req, res) => {
